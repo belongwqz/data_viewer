@@ -91,6 +91,8 @@ class Wnd(object):
         self.horizontalHeader = self.view.horizontalHeader()
         self.horizontalHeader.sectionClicked.connect(self.on_view_horizontalHeader_sectionClicked)
         self.view.doubleClicked.connect(self.on_view_doubleClicked)
+        self.view.clicked.connect(self.on_view_clicked)
+        self.view.setColumnWidth(4, 30)
         self.btn_add.clicked.connect(self.add_record)
         self.btn_del.clicked.connect(self.del_record)
         self.btn_mod.clicked.connect(self.mod_record)
@@ -115,11 +117,19 @@ class Wnd(object):
         if self.can_action():
             rowIndex = self.view.currentIndex().row()
             record = self.model.record(rowIndex)
-            dlg = ParamDlg(record)
+            dlg = ParamDlg(record, self.systems(), self.env_types(), self.info_types())
             if QtGui.QDialog.Accepted == dlg.exec_():
+                if record.value(
+                        'system') == dlg.system() and record.value(
+                        'env_type') == dlg.env_type() and record.value(
+                        'info') == dlg.info() and record.value(
+                        'info_type') == dlg.info_type() and record.value(
+                        'comment') == dlg.comment():
+                    return
                 record.setValue('system', dlg.system())
-                record.setValue('env', dlg.env())
+                record.setValue('env_type', dlg.env_type())
                 record.setValue('info', dlg.info())
+                record.setValue('info_type', dlg.info_type())
                 record.setValue('comment', dlg.comment())
                 if self.exist(record):
                     self.msg(u'记录重复，修改失败！')
@@ -128,6 +138,15 @@ class Wnd(object):
                     if not self.model.submitAll():
                         self.msg(u'提交失败！')
 
+    def systems(self):
+        return list(set([self.model.record(i).value('system') for i in range(self.model.rowCount())]))
+
+    def env_types(self):
+        return list(set([self.model.record(i).value('env_type') for i in range(self.model.rowCount())]))
+
+    def info_types(self):
+        return list(set([self.model.record(i).value('info_type') for i in range(self.model.rowCount())]))
+
     def del_record(self):
         if self.can_action() and QtGui.QMessageBox.Yes == QtGui.QMessageBox.information(
                 self.wnd, u'提示', u'确认删除？', QtGui.QMessageBox.Yes | QtGui.QMessageBox.No):
@@ -135,12 +154,13 @@ class Wnd(object):
 
     def add_record(self):
         record = self.model.record()
-        dlg = ParamDlg(record)
+        dlg = ParamDlg(record, self.systems(), self.env_types(), self.info_types())
         if QtGui.QDialog.Accepted == dlg.exec_():
             record = self.model.record()
             record.setValue("system", dlg.system())
-            record.setValue("env", dlg.env())
+            record.setValue("env_type", dlg.env_type())
             record.setValue("info", dlg.info())
+            record.setValue("info_type", dlg.info_type())
             record.setValue("comment", dlg.comment())
             if self.exist(record):
                 self.msg(u'记录重复，修改失败！')
@@ -153,15 +173,26 @@ class Wnd(object):
     def on_view_doubleClicked(self, info):
         QtGui.QApplication.clipboard().setText(info.data())
 
+    def on_view_clicked(self, info):
+        #self.set_cb_search_filter(info.column(), self.txt_search.text())
+        self.set_cb_search_filter(info.column())
+
     def on_txt_search_text_changed(self, text):
         search = QtCore.QRegExp(text, QtCore.Qt.CaseInsensitive, QtCore.QRegExp.RegExp)
         self.proxy.setFilterRegExp(search)
 
+    def set_cb_search_filter(self, index, reg=''):
+        self.cb_search.blockSignals(True)
+        filterColumn = index
+        filterString = QtCore.QRegExp(reg, QtCore.Qt.CaseInsensitive, QtCore.QRegExp.RegExp)
+        self.proxy.setFilterRegExp(filterString)
+        self.proxy.setFilterKeyColumn(filterColumn)
+        self.cb_search.setCurrentIndex(filterColumn)
+        self.cb_search.blockSignals(False)
+
     def on_view_horizontalHeader_sectionClicked(self, logicalIndex):
         self.logicalIndex = logicalIndex
-        self.cb_search.blockSignals(True)
-        self.cb_search.setCurrentIndex(self.logicalIndex)
-        self.cb_search.blockSignals(False)
+        self.set_cb_search_filter(logicalIndex)
         self.menuValues = QtGui.QMenu(self.wnd)
         self.signalMapper = QtCore.QSignalMapper(self.wnd)
         valuesUnique = [self.model.record(row).value(self.logicalIndex) for row in range(self.model.rowCount())]
@@ -183,17 +214,11 @@ class Wnd(object):
         self.menuValues.exec_(QtCore.QPoint(posX, posY))
 
     def on_actionAll_triggered(self):
-        filterColumn = self.logicalIndex
-        filterString = QtCore.QRegExp("", QtCore.Qt.CaseInsensitive, QtCore.QRegExp.RegExp)
-        self.proxy.setFilterRegExp(filterString)
-        self.proxy.setFilterKeyColumn(filterColumn)
+        self.set_cb_search_filter(self.logicalIndex)
 
     def on_signalMapper_mapped(self, i):
         stringAction = self.signalMapper.mapping(i).text()
-        filterColumn = self.logicalIndex
-        filterString = QtCore.QRegExp(stringAction, QtCore.Qt.CaseSensitive, QtCore.QRegExp.FixedString)
-        self.proxy.setFilterRegExp(filterString)
-        self.proxy.setFilterKeyColumn(filterColumn)
+        self.set_cb_search_filter(self.logicalIndex, stringAction)
 
     def on_cb_search_currentIndexChanged(self, index):
         self.proxy.setFilterKeyColumn(index)
