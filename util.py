@@ -20,10 +20,11 @@ def init_db():
     q.exec_('''
           create table if not exists tb_sys_info (
             system varchar(100),
-            env varchar(50),
+            env_type varchar(50),
             info varchar(4096),
+            info_type varchar(50),
             comment varchar(4096),
-            PRIMARY KEY(system, env, info, comment)
+            PRIMARY KEY(system, env_type, info, info_type, comment)
           )
             ''')
     q.exec_('commit')
@@ -31,7 +32,7 @@ def init_db():
 
 # noinspection PyCallByClass,PyTypeChecker
 class ParamDlg(QtGui.QDialog):
-    def __init__(self, record, *args, **kwargs):
+    def __init__(self, record, systems, env_types, info_types, *args, **kwargs):
         super(ParamDlg, self).__init__(*args, **kwargs)
         self.setObjectName("dlg_param")
         self.resize(531, 392)
@@ -47,19 +48,25 @@ class ParamDlg(QtGui.QDialog):
         self.lb_system = QtGui.QLabel(self.layoutWidget)
         self.lb_system.setObjectName("lb_system")
         self.hl_system.addWidget(self.lb_system)
-        self.txt_system = QtGui.QLineEdit(self.layoutWidget)
-        self.txt_system.setObjectName("txt_system")
-        self.hl_system.addWidget(self.txt_system)
+        self.cb_system = QtGui.QComboBox(self.layoutWidget)
+        self.cb_system.setEditable(True)
+        self.cb_system.setObjectName("cb_system")
+        self.hl_system.addWidget(self.cb_system)
+        vs_system = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
+        self.hl_system.addItem(vs_system)
         self.vl_total.addLayout(self.hl_system)
-        self.horizontalLayout = QtGui.QHBoxLayout()
-        self.horizontalLayout.setObjectName("horizontalLayout")
+        self.hl_env = QtGui.QHBoxLayout()
+        self.hl_env.setObjectName("hl_env")
         self.lb_env = QtGui.QLabel(self.layoutWidget)
         self.lb_env.setObjectName("lb_env")
-        self.horizontalLayout.addWidget(self.lb_env)
-        self.txt_env = QtGui.QLineEdit(self.layoutWidget)
-        self.txt_env.setObjectName("txt_env")
-        self.horizontalLayout.addWidget(self.txt_env)
-        self.vl_total.addLayout(self.horizontalLayout)
+        self.hl_env.addWidget(self.lb_env)
+        self.cb_env = QtGui.QComboBox(self.layoutWidget)
+        self.cb_env.setEditable(True)
+        self.cb_env.setObjectName("cb_env")
+        self.hl_env.addWidget(self.cb_env)
+        vs_env = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
+        self.hl_env.addItem(vs_env)
+        self.vl_total.addLayout(self.hl_env)
         self.hl_info = QtGui.QHBoxLayout()
         self.hl_info.setObjectName("hl_info")
         self.vl_info = QtGui.QVBoxLayout()
@@ -75,6 +82,18 @@ class ParamDlg(QtGui.QDialog):
         self.txt_info.setObjectName("txt_info")
         self.hl_info.addWidget(self.txt_info)
         self.vl_total.addLayout(self.hl_info)
+        self.hl_info_type = QtGui.QHBoxLayout()
+        self.hl_info_type.setObjectName("hl_info_type")
+        self.lb_info_type = QtGui.QLabel(self.layoutWidget)
+        self.lb_info_type.setObjectName("lb_info_type")
+        self.hl_info_type.addWidget(self.lb_info_type)
+        self.cb_info_type = QtGui.QComboBox(self.layoutWidget)
+        self.cb_info_type.setEditable(True)
+        self.cb_info_type.setObjectName("cb_info_type")
+        self.hl_info_type.addWidget(self.cb_info_type)
+        vs_info_type = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
+        self.hl_info_type.addItem(vs_info_type)
+        self.vl_total.addLayout(self.hl_info_type)
         self.hl_comment = QtGui.QHBoxLayout()
         self.hl_comment.setObjectName("hl_comment")
         self.vl_comment = QtGui.QVBoxLayout()
@@ -105,13 +124,18 @@ class ParamDlg(QtGui.QDialog):
         self.setWindowTitle(QtGui.QApplication.translate("dlg_param", "参数", None, QtGui.QApplication.UnicodeUTF8))
         self.lb_system.setText(QtGui.QApplication.translate("dlg_param", "系统名称", None, QtGui.QApplication.UnicodeUTF8))
         self.lb_env.setText(QtGui.QApplication.translate("dlg_param", "环境类型", None, QtGui.QApplication.UnicodeUTF8))
-        self.lb_info.setText(QtGui.QApplication.translate("dlg_param", "系统信息", None, QtGui.QApplication.UnicodeUTF8))
-        self.lb_comment.setText(QtGui.QApplication.translate("dlg_param", "补充说明", None, QtGui.QApplication.UnicodeUTF8))
+        self.lb_info.setText(QtGui.QApplication.translate("dlg_param", "信息", None, QtGui.QApplication.UnicodeUTF8))
+        self.lb_info_type.setText(QtGui.QApplication.translate("dlg_param", "类型", None, QtGui.QApplication.UnicodeUTF8))
+        self.lb_comment.setText(QtGui.QApplication.translate("dlg_param", "说明", None, QtGui.QApplication.UnicodeUTF8))
+        self.cb_system.addItems(systems)
+        self.cb_env.addItems(env_types)
+        self.cb_info_type.addItems(info_types)
         self.buttonBox.accepted.connect(self.handle_accept)
         self.buttonBox.rejected.connect(self.reject)
-        self.txt_system.setText(record.value('system'))
-        self.txt_env.setText(record.value('env'))
+        self.cb_system.setEditText(record.value('system'))
+        self.cb_env.setEditText(record.value('env_type'))
         self.txt_info.setPlainText(record.value('info'))
+        self.cb_info_type.setEditText(record.value('info_type'))
         self.txt_comment.setPlainText(record.value('comment'))
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap('app.ico'), QtGui.QIcon.Normal, QtGui.QIcon.Off)
@@ -124,13 +148,16 @@ class ParamDlg(QtGui.QDialog):
         self.accept()
 
     def system(self):
-        return self.txt_system.text()
+        return self.cb_system.currentText()
 
-    def env(self):
-        return self.txt_env.text()
+    def env_type(self):
+        return self.cb_env.currentText()
 
     def info(self):
         return self.txt_info.toPlainText()
+
+    def info_type(self):
+        return self.cb_info_type.currentText()
 
     def comment(self):
         return self.txt_comment.toPlainText()
@@ -140,6 +167,6 @@ class Model(QSqlTableModel):
     def __init__(self, parent):
         QSqlTableModel.__init__(self, parent)
         self.setTable("tb_sys_info")
-        [self.setHeaderData(i, QtCore.Qt.Horizontal, h) for i, h in enumerate([u'系统名称', u'环境类型', u'系统信息', u'补充说明'])]
+        [self.setHeaderData(i, QtCore.Qt.Horizontal, h) for i, h in enumerate([u'系统名称', u'环境', u'信息', u'类型', u'说明'])]
         self.select()
         self.setEditStrategy(QSqlRelationalTableModel.OnFieldChange)
