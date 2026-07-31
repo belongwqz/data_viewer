@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>服务目录 - 运维工具能力平台</title>
+<style>
+:root {
+  --bg-primary: #f5f5f7;
+  --bg-sidebar: rgba(245,245,247,0.8);
+  --bg-card: rgba(255,255,255,0.72);
+  --bg-toolbar: rgba(255,255,255,0.75);
+  --text-primary: #1d1d1f;
+  --text-secondary: #6e6e73;
+  --text-tertiary: #aeaeb2;
+  --border-subtle: rgba(0,0,0,0.06);
+  --border-card: rgba(0,0,0,0.08);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.06);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.08);
+  --accent-blue: #0071e3;
+  --accent-red: #ff3b30;
+  --accent-green: #34c759;
+  --accent-purple: #af52de;
+  --accent-amber: #ff9500;
+  --accent-pink: #ff2d55;
+  --sidebar-width: 260px;
+  --toolbar-height: 56px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", "PingFang SC", sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ===== Background ===== */
+.bg-grain {
+  position: fixed; inset: 0;
+  background-image: radial-gradient(circle at 20% 80%, rgba(0,113,227,0.03) 0%, transparent 50%),
+                    radial-gradient(circle at 80% 20%, rgba(175,82,222,0.03) 0%, transparent 50%),
+                    radial-gradient(circle at 50% 50%, rgba(52,199,89,0.02) 0%, transparent 50%);
+  pointer-events: none; z-index: 0;
+}
+
+/* ===== Sidebar ===== */
+.sidebar {
+  width: var(--sidebar-width); height: 100vh;
+  background: var(--bg-sidebar);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-right: 1px solid var(--border-subtle);
+  display: flex; flex-direction: column;
+  z-index: 10; position: relative;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.sidebar-header {
+  padding: 20px 20px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.sidebar-logo {
+  font-size: 13px; font-weight: 600; letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  display: flex; align-items: center; gap: 8px;
+}
+.sidebar-logo .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent-blue);
+  box-shadow: 0 0 6px rgba(0,113,227,0.35);
+}
+.sidebar-title {
+  font-size: 18px; font-weight: 700; color: var(--text-primary);
+  margin-top: 6px; letter-spacing: -0.3px;
+}
+.sidebar-subtitle {
+  font-size: 11px; color: var(--text-tertiary); margin-top: 2px;
+}
+
+.sidebar-nav { flex: 1; overflow-y: auto; padding: 8px 12px; }
+.sidebar-nav::-webkit-scrollbar { width: 4px; }
+.sidebar-nav::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 2px; }
+
+.nav-category {
+  margin-bottom: 2px;
+}
+.nav-category-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: var(--radius-sm);
+  cursor: pointer; transition: all 0.18s ease;
+  margin-bottom: 2px;
+  position: relative;
+}
+.nav-category-header:hover { background: rgba(0,0,0,0.04); }
+.nav-category-header.active { background: rgba(0,113,227,0.08); }
+.nav-category-header .nav-icon { font-size: 18px; width: 24px; text-align: center; }
+.nav-category-header .nav-name { font-size: 14px; font-weight: 500; flex: 1; }
+.nav-category-header .nav-badge {
+  font-size: 11px; color: var(--text-tertiary); padding: 2px 8px;
+  background: rgba(0,0,0,0.04); border-radius: 10px;
+}
+.nav-category-header .nav-chevron {
+  font-size: 10px; color: var(--text-tertiary);
+  transition: transform 0.2s ease;
+}
+.nav-category.expanded .nav-chevron { transform: rotate(90deg); }
+
+.nav-subgroups {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.3s ease;
+}
+.nav-category.expanded .nav-subgroups { max-height: 800px; }
+.nav-subgroup {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 12px 6px 44px; border-radius: 6px;
+  cursor: pointer; transition: all 0.15s ease;
+  font-size: 13px; color: var(--text-secondary);
+}
+.nav-subgroup:hover { background: rgba(0,0,0,0.03); color: var(--text-primary); }
+.nav-subgroup.active { background: rgba(0,113,227,0.06); color: var(--accent-blue); font-weight: 500; }
+.nav-subgroup .sg-count { font-size: 11px; color: var(--text-tertiary); margin-left: auto; }
+
+.nav-separator {
+  height: 1px; background: var(--border-subtle); margin: 8px 12px;
+}
+.nav-agent-entry {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px; margin: 4px 12px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  background: linear-gradient(135deg, rgba(0,113,227,0.05), rgba(175,82,222,0.05));
+  border: 1px solid rgba(0,113,227,0.1);
+  transition: all 0.18s ease;
+}
+.nav-agent-entry:hover {
+  background: linear-gradient(135deg, rgba(0,113,227,0.1), rgba(175,82,222,0.1));
+  border-color: rgba(0,113,227,0.2);
+}
+.nav-agent-entry .agent-icon { font-size: 20px; }
+.nav-agent-entry .agent-label { font-size: 13px; font-weight: 500; flex: 1; }
+.nav-agent-entry .agent-badge {
+  font-size: 10px; color: var(--accent-amber); padding: 2px 8px;
+  background: rgba(255,149,0,0.1); border-radius: 10px;
+}
+
+/* ===== Main Content ===== */
+.main-content {
+  flex: 1; display: flex; flex-direction: column;
+  height: 100vh; position: relative; z-index: 1;
+  min-width: 0;
+}
+
+/* Toolbar */
+.toolbar {
+  height: var(--toolbar-height);
+  background: var(--bg-toolbar);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 24px; z-index: 5; flex-shrink: 0;
+}
+.search-wrapper {
+  flex: 1; max-width: 480px; position: relative;
+}
+.search-icon {
+  position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+  font-size: 14px; color: var(--text-tertiary); pointer-events: none;
+}
+.search-input {
+  width: 100%; height: 36px; padding: 0 14px 0 38px;
+  border: 1px solid var(--border-card); border-radius: 10px;
+  background: rgba(0,0,0,0.02); font-size: 13px; color: var(--text-primary);
+  outline: none; transition: all 0.2s ease;
+  font-family: inherit;
+}
+.search-input:focus {
+  border-color: rgba(0,113,227,0.3);
+  background: rgba(0,113,227,0.02);
+  box-shadow: 0 0 0 3px rgba(0,113,227,0.06);
+}
+.search-input::placeholder { color: var(--text-tertiary); }
+
+.filter-group { display: flex; gap: 6px; align-items: center; }
+.filter-chip {
+  padding: 5px 14px; border-radius: 16px; font-size: 12px;
+  border: 1px solid var(--border-card); background: transparent;
+  color: var(--text-secondary); cursor: pointer;
+  transition: all 0.15s ease; white-space: nowrap;
+}
+.filter-chip:hover { background: rgba(0,0,0,0.03); }
+.filter-chip.active {
+  background: var(--accent-blue); color: #fff; border-color: var(--accent-blue);
+}
+
+.filter-divider { width: 1px; height: 20px; background: var(--border-subtle); margin: 0 4px; }
+
+.stats-bar {
+  padding: 12px 24px; font-size: 12px; color: var(--text-tertiary);
+  display: flex; align-items: center; gap: 16px; flex-shrink: 0;
+}
+.stats-bar strong { color: var(--text-primary); font-weight: 600; }
+
+/* Cards Grid */
+.card-grid-wrapper {
+  flex: 1; overflow-y: auto; padding: 0 24px 24px;
+}
+.card-grid-wrapper::-webkit-scrollbar { width: 5px; }
+.card-grid-wrapper::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.08); border-radius: 3px; }
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+/* Card */
+.service-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(12px) saturate(160%);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  padding: 18px;
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.25, 0.1, 0.25, 1);
+  position: relative;
+  overflow: hidden;
+}
+.service-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+.service-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(0,0,0,0.12);
+}
+.service-card:active { transform: scale(0.985); }
+
+.service-card.color-red::before { background: linear-gradient(90deg, #ff3b30, #ff6b6b); }
+.service-card.color-blue::before { background: linear-gradient(90deg, #0071e3, #40a9ff); }
+.service-card.color-green::before { background: linear-gradient(90deg, #34c759, #5ee48c); }
+.service-card.color-purple::before { background: linear-gradient(90deg, #af52de, #d488ff); }
+.service-card.color-amber::before { background: linear-gradient(90deg, #ff9500, #ffb84d); }
+.service-card.color-pink::before { background: linear-gradient(90deg, #ff2d55, #ff6b81); }
+
+.card-icon { font-size: 28px; margin-bottom: 10px; }
+.card-name { font-size: 15px; font-weight: 600; margin-bottom: 6px; letter-spacing: -0.2px; }
+.card-meta { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+.card-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
+.card-tag {
+  padding: 2px 8px; border-radius: 10px; font-size: 11px;
+  font-weight: 500;
+}
+.card-tag.auto { background: rgba(52,199,89,0.1); color: #248a3d; }
+.card-tag.manual { background: rgba(255,149,0,0.1); color: #c27500; }
+.card-tag.cat-tag { background: rgba(0,0,0,0.04); color: var(--text-secondary); }
+.card-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-subtle);
+  font-size: 11px; color: var(--text-tertiary);
+}
+
+/* Detail Modal (macOS sheet style) */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 1000; align-items: center; justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+.modal-overlay.show { display: flex; }
+.modal-sheet {
+  width: 580px; max-height: 70vh;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 25px 60px rgba(0,0,0,0.2), 0 0 0 1px rgba(0,0,0,0.06);
+  display: flex; flex-direction: column;
+  animation: slideUp 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+  overflow: hidden;
+}
+.modal-header {
+  padding: 20px 24px 16px; border-bottom: 1px solid var(--border-subtle);
+  display: flex; align-items: flex-start; justify-content: space-between;
+}
+.modal-header-left { flex: 1; }
+.modal-title-row { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.modal-icon { font-size: 32px; }
+.modal-name { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+.modal-category { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
+.modal-close {
+  width: 28px; height: 28px; border-radius: 50%; border: none;
+  background: rgba(0,0,0,0.06); color: var(--text-secondary);
+  font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; flex-shrink: 0;
+}
+.modal-close:hover { background: rgba(0,0,0,0.12); }
+.modal-body {
+  padding: 20px 24px; overflow-y: auto; font-size: 13px;
+  line-height: 1.7; color: var(--text-secondary);
+}
+.modal-body::-webkit-scrollbar { width: 4px; }
+.modal-body::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 2px; }
+.modal-body strong { color: var(--text-primary); }
+.modal-meta-row {
+  display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap;
+}
+.modal-meta-item { font-size: 12px; color: var(--text-tertiary); }
+.modal-meta-item span { color: var(--text-primary); font-weight: 500; }
+.modal-desc {
+  padding: 12px 16px; background: rgba(0,0,0,0.02);
+  border-radius: var(--radius-sm); margin-bottom: 16px;
+  border-left: 3px solid var(--accent-blue);
+}
+.modal-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+
+/* ===== Agent Panel ===== */
+.agent-fab {
+  position: fixed; bottom: 28px; right: 28px; z-index: 500;
+  width: 56px; height: 56px; border-radius: 50%;
+  border: none; cursor: pointer;
+  background: linear-gradient(135deg, #0071e3, #af52de);
+  color: #fff; font-size: 24px;
+  box-shadow: 0 6px 20px rgba(0,113,227,0.35);
+  transition: all 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+  display: flex; align-items: center; justify-content: center;
+}
+.agent-fab:hover {
+  transform: scale(1.06);
+  box-shadow: 0 8px 28px rgba(0,113,227,0.45);
+}
+.agent-fab:active { transform: scale(0.95); }
+
+.agent-panel {
+  position: fixed; bottom: 100px; right: 28px; z-index: 499;
+  width: 420px; max-height: 560px;
+  background: rgba(255,255,255,0.9);
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.06);
+  display: flex; flex-direction: column;
+  opacity: 0; transform: translateY(16px) scale(0.95);
+  pointer-events: none;
+  transition: all 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+  overflow: hidden;
+}
+.agent-panel.open {
+  opacity: 1; transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+.agent-panel-header {
+  padding: 16px 20px; border-bottom: 1px solid var(--border-subtle);
+  display: flex; align-items: center; gap: 10px;
+}
+.agent-panel-header .agent-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: linear-gradient(135deg, #0071e3, #af52de);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; color: #fff;
+}
+.agent-panel-header .agent-info { flex: 1; }
+.agent-panel-header .agent-info .name { font-size: 14px; font-weight: 600; }
+.agent-panel-header .agent-info .status {
+  font-size: 11px; color: var(--accent-green); display: flex; align-items: center; gap: 4px;
+}
+.agent-panel-header .agent-info .status .dot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--accent-green);
+}
+.agent-panel-close {
+  width: 26px; height: 26px; border: none; border-radius: 50%;
+  background: rgba(0,0,0,0.05); cursor: pointer; font-size: 12px; color: var(--text-secondary);
+  display: flex; align-items: center; justify-content: center;
+}
+.agent-panel-close:hover { background: rgba(0,0,0,0.1); }
+
+.agent-chat { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+.agent-chat::-webkit-scrollbar { width: 4px; }
+.agent-chat::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.08); border-radius: 2px; }
+
+.agent-msg { display: flex; gap: 8px; align-items: flex-start; }
+.agent-msg.bot .msg-bubble {
+  background: rgba(0,0,0,0.04); border-radius: 4px 14px 14px 14px;
+  font-size: 13px; line-height: 1.6; padding: 12px 16px; max-width: 90%; white-space: pre-line;
+}
+.agent-msg.user .msg-bubble {
+  background: var(--accent-blue); color: #fff;
+  border-radius: 14px 4px 14px 14px;
+  font-size: 13px; line-height: 1.5; padding: 10px 16px; max-width: 85%;
+  margin-left: auto;
+}
+
+.agent-suggestions { padding: 0 20px 12px; }
+.agent-suggestions-label { font-size: 11px; color: var(--text-tertiary); margin-bottom: 8px; }
+.agent-suggestion-chip {
+  display: inline-block; padding: 6px 14px; border-radius: 16px;
+  font-size: 12px; border: 1px solid var(--border-card); cursor: pointer;
+  margin: 0 6px 6px 0; transition: all 0.15s;
+  color: var(--text-secondary); background: rgba(0,0,0,0.02);
+}
+.agent-suggestion-chip:hover {
+  background: rgba(0,113,227,0.06); border-color: rgba(0,113,227,0.2); color: var(--accent-blue);
+}
+.agent-input-row {
+  padding: 12px 20px 16px; border-top: 1px solid var(--border-subtle);
+  display: flex; gap: 8px;
+}
+.agent-input {
+  flex: 1; height: 36px; padding: 0 14px;
+  border: 1px solid var(--border-card); border-radius: 18px;
+  background: rgba(0,0,0,0.02); font-size: 13px;
+  outline: none; font-family: inherit;
+}
+.agent-input:focus { border-color: rgba(0,113,227,0.3); }
+.agent-send {
+  width: 36px; height: 36px; border-radius: 50%; border: none;
+  background: var(--accent-blue); color: #fff; font-size: 14px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.agent-send:hover { background: #0062cc; }
+
+/* Empty State */
+.empty-state {
+  grid-column: 1 / -1;
+  text-align: center; padding: 60px 20px;
+  color: var(--text-tertiary);
+}
+.empty-state-icon { font-size: 48px; margin-bottom: 12px; }
+.empty-state-title { font-size: 16px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; }
+
+/* Animations */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .sidebar { width: 68px; }
+  .sidebar-title, .sidebar-subtitle, .nav-category-header .nav-name,
+  .nav-category-header .nav-badge, .nav-category-header .nav-chevron,
+  .nav-subgroup { display: none; }
+  .nav-category-header { justify-content: center; padding: 10px 0; }
+  .card-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+  .agent-panel { width: calc(100vw - 40px); right: 20px; }
+}
+</style>
+</head>
+<body>
+<div class="bg-grain"></div>
+
+<!-- ===== Sidebar ===== -->
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo"><span class="dot"></span> GIANT 运维平台</div>
+    <div class="sidebar-title">服务目录</div>
+    <div class="sidebar-subtitle">6大类能力 · 全量纳管</div>
+  </div>
+  <nav class="sidebar-nav" id="sidebarNav"></nav>
+  <div class="nav-agent-entry" id="sidebarAgentEntry" onclick="toggleAgent()">
+    <span class="agent-icon">🎯</span>
+    <span class="agent-label">工具平台助手</span>
+    <span class="agent-badge">规划中</span>
+  </div>
+</aside>
+
+<!-- ===== Main ===== -->
+<div class="main-content">
+  <div class="toolbar">
+    <div class="search-wrapper">
+      <span class="search-icon">🔍</span>
+      <input class="search-input" id="searchInput" placeholder="搜索服务、接口、工具..." oninput="applyFilters()">
+    </div>
+    <div class="filter-divider"></div>
+    <div class="filter-group" id="sourceFilterGroup">
+      <span style="font-size:11px;color:var(--text-tertiary);margin-right:2px;">数据来源</span>
+      <button class="filter-chip active" data-source="all" onclick="setSourceFilter('all',this)">全部</button>
+      <button class="filter-chip" data-source="自动采集" onclick="setSourceFilter('自动采集',this)">自动采集</button>
+      <button class="filter-chip" data-source="手工登记" onclick="setSourceFilter('手工登记',this)">手工登记</button>
+    </div>
+    <div class="filter-divider"></div>
+    <div class="filter-group" id="statusFilterGroup">
+      <span style="font-size:11px;color:var(--text-tertiary);margin-right:2px;">状态</span>
+      <button class="filter-chip active" data-status="all" onclick="setStatusFilter('all',this)">全部</button>
+      <button class="filter-chip" data-status="已上线" onclick="setStatusFilter('已上线',this)">已上线</button>
+      <button class="filter-chip" data-status="规划中" onclick="setStatusFilter('规划中',this)">规划中</button>
+    </div>
+  </div>
+  <div class="stats-bar" id="statsBar"></div>
+  <div class="card-grid-wrapper">
+    <div class="card-grid" id="cardGrid"></div>
+  </div>
+</div>
+
+<!-- ===== Detail Modal ===== -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal-sheet">
+    <div class="modal-header">
+      <div class="modal-header-left">
+        <div class="modal-title-row">
+          <span class="modal-icon" id="modalIcon"></span>
+          <span class="modal-name" id="modalName"></span>
+        </div>
+        <div class="modal-category" id="modalCategory"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<!-- ===== Agent FAB + Panel ===== -->
+<button class="agent-fab" id="agentFab" onclick="toggleAgent()" title="工具平台助手">💬</button>
+
+<div class="agent-panel" id="agentPanel">
+  <div class="agent-panel-header">
+    <div class="agent-avatar">🎯</div>
+    <div class="agent-info">
+      <div class="name">工具平台助手</div>
+      <div class="status"><span class="dot"></span> 在线 · 规划中（模拟演示）</div>
+    </div>
+    <button class="agent-panel-close" onclick="toggleAgent()">✕</button>
+  </div>
+  <div class="agent-chat" id="agentChat">
+    <div class="agent-msg bot">
+      <div class="msg-bubble">你好！我是<strong>工具平台助手</strong>（规划中）。
+
+我可以帮你：
+• 🔍 快速检索六大类别服务
+• 📊 查询 CMDB 资产信息
+• 🔄 查询运维流程数据
+
+试试下面的建议问题，或直接输入你想了解的内容 👇</div>
+    </div>
+  </div>
+  <div class="agent-suggestions" id="agentSuggestions"></div>
+  <div class="agent-input-row">
+    <input class="agent-input" id="agentInput" placeholder="输入问题..." onkeydown="if(event.key==='Enter')sendAgentMsg()">
+    <button class="agent-send" onclick="sendAgentMsg()">↑</button>
+  </div>
+</div>
+
+<script>
+// ===== DATA =====
+const CATEGORIES = [
+  {
+    id: 'process', name: '流程', icon: '📋', color: '#ef4444', colorClass: 'red',
+    badge: '156项 / 12团队', source: '自动采集', status: '已上线',
+    subgroups: [
+      {name:'系统管理组',count:41,tags:['变更管理','故障处理','资源申请']},
+      {name:'网络组',count:32,tags:['变更管理','网络配置']},
+      {name:'信息安全组',count:24,tags:['权限管控','安全','非运维团队']},
+      {name:'公共流程',count:12,tags:['公共','服务请求']},
+      {name:'特定交易支持组',count:12,tags:['PB客户','服务请求']},
+      {name:'数据库管理组',count:12,tags:['数据库']},
+      {name:'数据及公共服务支持组',count:11,tags:['Kafka','机房']},
+      {name:'运维开发组',count:5,tags:['CMDB','工具需求']},
+      {name:'零售核心支持组',count:2,tags:['交易网关']},
+      {name:'清算支持组',count:1,tags:['虚拟团队']},
+      {name:'互联网应用服务组',count:1,tags:['K8S']},
+      {name:'领航CM',count:3,tags:['非运维团队','权限']}
+    ],
+    desc: '覆盖变更管理、资源申请、权限管控、故障处置等全场景，12个服务团队156项流程工单统一纳管。'
+  },
+  {
+    id: 'rest', name: 'REST接口', icon: '🔗', color: '#3b82f6', colorClass: 'blue',
+    badge: '标准化API', source: '手工登记', status: '已上线',
+    subgroups: [
+      {name:'签报管理接口',count:1,tags:['签报']},
+      {name:'防火墙工单接口',count:1,tags:['网络变更']},
+      {name:'运维知识库接口',count:1,tags:['知识库']},
+      {name:'云匠架构查询接口',count:1,tags:['架构']},
+      {name:'运维排班查询接口',count:1,tags:['排班']},
+      {name:'证券人员判断接口',count:1,tags:['鉴权']},
+      {name:'快乐平安移动端能力接口',count:1,tags:['移动端']},
+      {name:'集团ITSM与CMDB接口',count:1,tags:['ITSM','CMDB']},
+      {name:'人员汇报关系接口',count:1,tags:['组织架构']}
+    ],
+    desc: '统一纳管运维平台对外提供的RESTful API接口，实现接口资产集中管理与检索，覆盖签报、防火墙、知识库等核心场景。'
+  },
+  {
+    id: 'view', name: '视图', icon: '🖥️', color: '#10b981', colorClass: 'green',
+    badge: '1177+个 / 8类', source: '自动采集', status: '已上线',
+    subgroups: [
+      {name:'主机类视图',count:463,tags:['主机','OS','集群']},
+      {name:'应用类视图',count:371,tags:['子系统','实例']},
+      {name:'网络类视图',count:216,tags:['交换机','防火墙']},
+      {name:'稽核类视图',count:220,tags:['数据稽核','质量']},
+      {name:'数据库类视图',count:115,tags:['数据库']},
+      {name:'机房/机柜类视图',count:81,tags:['机房']},
+      {name:'存储类视图',count:67,tags:['SAN','NAS']},
+      {name:'运维管理类视图',count:35,tags:['团队','业务域']}
+    ],
+    desc: '覆盖CMDB新老视图及稽核视图的全量数据可视化资产，8大类别1,177+个视图，自动同步元数据信息。'
+  },
+  {
+    id: 'mcp', name: 'MCP服务', icon: '🤖', color: '#8b5cf6', colorClass: 'purple',
+    badge: '192工具 / 23模块', source: '自动采集', status: '已上线',
+    subgroups: [
+      {name:'通用工具 COMMON',count:6,tags:['事件','排班']},
+      {name:'CMDB表查询',count:11,tags:['CMDB']},
+      {name:'CMDB图模块',count:10,tags:['图查询']},
+      {name:'事件工作台 EVENT',count:1,tags:['事件']},
+      {name:'告警中心 ALERTS',count:10,tags:['告警']},
+      {name:'运维知识库 KW',count:2,tags:['RAG']},
+      {name:'Detector',count:2,tags:['经纪系统']},
+      {name:'领航服务指标',count:14,tags:['性能曲线']},
+      {name:'领航大数据',count:2,tags:['版本变更']},
+      {name:'存储工具 VSTOR',count:3,tags:['存储']},
+      {name:'网络查询 NET',count:10,tags:['NPM']},
+      {name:'脚本测试工具',count:2,tags:['自动化']},
+      {name:'容量指标查询',count:3,tags:['容量']},
+      {name:'状态中心 STATUS',count:1,tags:['变更']},
+      {name:'YjSearch',count:1,tags:['应急预案']},
+      {name:'GIANT工作流',count:2,tags:['Langflow']},
+      {name:'领航RDS',count:19,tags:['FLEET']},
+      {name:'领航TAP',count:7,tags:['交易管理']},
+      {name:'领航GUIDE',count:11,tags:['交易前端']},
+      {name:'领航指标',count:9,tags:['Prometheus']},
+      {name:'K8S开发MCP',count:14,tags:['K8S']},
+      {name:'普米开发MCP',count:28,tags:['监控']},
+      {name:'VMWARE监控',count:24,tags:['VMWARE']}
+    ],
+    desc: '面向AI智能体的MCP协议服务注册中心，为智能体提供标准化运维能力接入，192个工具覆盖23个模块。'
+  },
+  {
+    id: 'service', name: '功能服务', icon: '⚡', color: '#f59e0b', colorClass: 'amber',
+    badge: '9大类', source: '手工登记', status: '已上线',
+    subgroups: [
+      {name:'应用视图',count:1,tags:['应用管理']},
+      {name:'托管客户工具',count:1,tags:['PB客户']},
+      {name:'容量管理',count:1,tags:['资源指标']},
+      {name:'变更工作台',count:1,tags:['变更']},
+      {name:'运维知识库',count:1,tags:['知识管理']},
+      {name:'安全漏洞管理',count:1,tags:['安全']},
+      {name:'资产视图',count:1,tags:['资产概览']},
+      {name:'作业调度自动化',count:1,tags:['定时任务']},
+      {name:'应急管理工作台',count:1,tags:['应急']}
+    ],
+    desc: '面向运维场景的功能型工具与服务纳管，覆盖资源管理、容量规划、变更跟踪等核心能力。'
+  },
+  {
+    id: 'ai', name: 'AI工具', icon: '🧠', color: '#f472b6', colorClass: 'pink',
+    badge: '9大工具', source: '手工登记', status: '已上线',
+    subgroups: [
+      {name:'集团智能体平台',count:1,tags:['编排','外部']},
+      {name:'证券智能体平台',count:1,tags:['本地化','外部']},
+      {name:'爱码',count:1,tags:['vibe coding','外部']},
+      {name:'n8n',count:1,tags:['流程编排','GIANT']},
+      {name:'Langflow',count:1,tags:['可视化','GIANT']},
+      {name:'MCP网关',count:1,tags:['统一入口','GIANT']},
+      {name:'运维知识库',count:1,tags:['RAG','GIANT']},
+      {name:'集团运维MAX',count:1,tags:['harness','外部']},
+      {name:'集团平安ONE',count:1,tags:['harness','外部']}
+    ],
+    desc: '各团队智能运维场景使用的AI工具清单，涵盖自建与外部引入工具，覆盖智能体编排、流程自动化、知识库等核心能力。'
+  }
+];
+
+const AGENT_CARDS = [
+  {name:'服务目录问答',icon:'🔍',desc:'对六大类别服务数据统一语义搜索与自然语言问答',example:'「我想要为XXX子系统的XXX组件申请3台生产环境机器」'},
+  {name:'CMDB问数',icon:'📊',desc:'通过自然语言查询CMDB资产统计与明细',example:'「我名下的主机有多少台？」'},
+  {name:'流程问数',icon:'🔄',desc:'查询运维流程执行数据与统计分析',example:'「统计一下本月发起了多少单二级变更？」'}
+];
+
+const SUGGESTIONS = [
+  "帮我找一个能查询服务器信息的接口",
+  "有哪些流程跟主机申请相关？",
+  "CMDB有哪些视图？",
+  "支持哪些监控告警类MCP工具？",
+  "本周有多少变更工单？"
+];
+
+const MOCK_ANSWERS = {
+  "帮我找一个能查询服务器信息的接口":"为您找到以下相关接口：\n\n• CMDB 表查询 MCP — 支持按主机名、IP、应用等条件检索服务器基础信息（11个工具）\n• 主机类视图 — 463个视图覆盖主机硬件、OS、集群、虚拟机等全维度\n• 人员汇报关系接口 — REST API，可查询服务器归属与关联信息\n\n建议您通过左侧「MCP服务」或「视图」分类进一步筛选。",
+  "有哪些流程跟主机申请相关？":"根据流程目录检索，与主机申请相关的流程共 8项：\n\n1. 主机参数修改（系统管理组）\n2. 新主机搭建（系统管理组）\n3. 申请主机root口令（系统管理组）\n4. 主机OS替换（系统管理组）\n5. 主机重装OS（系统管理组）\n6. 主机硬件故障维护（系统管理组）\n7. 主机OS申请流程-自动化（系统管理组）\n8. 托管客户主机上架申请（特定交易支持组）\n\n您可以点击左侧「流程」-「系统管理组」查看完整清单。",
+  "CMDB有哪些视图？":"CMDB 视图共 1,177+ 个，分8大类别：\n\n主机类 463 | 应用类 371 | 网络类 216\n稽核类 220 | 数据库类 115 | 机房/机柜类 81\n存储类 67 | 运维管理类 35\n\n所有视图均通过CMDB模块自动采集元数据。",
+  "支持哪些监控告警类MCP工具？":"监控告警类 MCP 工具主要分布在以下模块：\n\n• 告警中心 ALERTS — 10个工具\n• 普米开发 MCP — 28个工具（最大模块）\n• VMWARE 监控 — 24个工具\n• 领航服务指标 — 14个工具\n• 领航 RDS — 19个工具\n• 领航 TAP — 7个工具\n• 领航 GUIDE — 11个工具\n\n总计 113个 监控告警类MCP工具，覆盖基础设施到业务层。",
+  "本周有多少变更工单？":"您好，流程问数功能尚在规划中（智能体规划阶段）。\n\n当前可用能力：\n• 变更工作台（功能服务）— 变更流程全生命周期管理\n• 状态中心 STATUS MCP — 查询变更数据（1个工具）\n• 流程 — 包含变更上报、变更预沟通等流程入口\n\n待智能体上线后，流程问数将支持自然语言查询变更统计数据。"
+};
+
+// ===== STATE =====
+let activeCategory = null;
+let activeSubgroup = null;
+let sourceFilter = 'all';
+let statusFilter = 'all';
+let isAgentOpen = false;
+
+// ===== INIT =====
+function init() {
+  buildSidebar();
+  buildSuggestions();
+  applyFilters();
+}
+function buildSidebar() {
+  const nav = document.getElementById('sidebarNav');
+  let html = '';
+  CATEGORIES.forEach((cat, i) => {
+    html += `<div class="nav-category" id="navCat_${cat.id}">
+      <div class="nav-category-header" onclick="toggleCategory('${cat.id}')">
+        <span class="nav-icon">${cat.icon}</span>
+        <span class="nav-name">${cat.name}</span>
+        <span class="nav-badge">${cat.badge}</span>
+        <span class="nav-chevron">▶</span>
+      </div>
+      <div class="nav-subgroups">
+        <div class="nav-subgroup" onclick="selectSubgroup('${cat.id}', null, '全部${cat.name}')">全部${cat.name}</div>`;
+    cat.subgroups.forEach(sg => {
+      html += `<div class="nav-subgroup" onclick="selectSubgroup('${cat.id}', '${sg.name.replace(/'/g, "\\'")}', '${sg.name.replace(/'/g, "\\'")}')">${sg.name}<span class="sg-count">${sg.count}</span></div>`;
+    });
+    html += `</div></div>`;
+  });
+  nav.innerHTML = html;
+
+  // 默认展开第一个
+  toggleCategory(CATEGORIES[0].id);
+}
+
+function toggleCategory(catId) {
+  const el = document.getElementById('navCat_' + catId);
+  if (!el) return;
+  const wasExpanded = el.classList.contains('expanded');
+  // 关闭所有
+  document.querySelectorAll('.nav-category').forEach(c => c.classList.remove('expanded'));
+  document.querySelectorAll('.nav-category-header').forEach(h => h.classList.remove('active'));
+  if (!wasExpanded) {
+    el.classList.add('expanded');
+    el.querySelector('.nav-category-header').classList.add('active');
+  }
+  // 选中类别
+  activeCategory = wasExpanded ? null : catId;
+  activeSubgroup = null;
+  applyFilters();
+}
+
+function selectSubgroup(catId, sgName, displayName) {
+  activeCategory = catId;
+  activeSubgroup = sgName;
+  // 高亮
+  document.querySelectorAll('.nav-subgroup').forEach(s => s.classList.remove('active'));
+  if (sgName) {
+    const subgroups = document.querySelectorAll('#navCat_' + catId + ' .nav-subgroup');
+    subgroups.forEach(s => { if (s.textContent.trim().startsWith(sgName)) s.classList.add('active'); });
+  } else {
+    document.querySelector('#navCat_' + catId + ' .nav-subgroup').classList.add('active');
+  }
+  // 确保展开
+  const el = document.getElementById('navCat_' + catId);
+  if (el && !el.classList.contains('expanded')) {
+    document.querySelectorAll('.nav-category').forEach(c => c.classList.remove('expanded'));
+    el.classList.add('expanded');
+  }
+  applyFilters();
+}
+
+// ===== FILTERS =====
+function setSourceFilter(val, btn) {
+  sourceFilter = val;
+  document.querySelectorAll('#sourceFilterGroup .filter-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilters();
+}
+function setStatusFilter(val, btn) {
+  statusFilter = val;
+  document.querySelectorAll('#statusFilterGroup .filter-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilters();
+}
+
+function applyFilters() {
+  const searchText = document.getElementById('searchInput').value.toLowerCase().trim();
+  const grid = document.getElementById('cardGrid');
+  const statsBar = document.getElementById('statsBar');
+
+  // 收集所有卡片数据
+  let cards = [];
+  CATEGORIES.forEach(cat => {
+    if (activeCategory && activeCategory !== cat.id) return;
+    if (sourceFilter !== 'all' && cat.source !== sourceFilter) return;
+    if (statusFilter !== 'all' && cat.status !== statusFilter) return;
+
+    cat.subgroups.forEach(sg => {
+      if (activeSubgroup && sg.name !== activeSubgroup) return;
+      const cardText = (sg.name + ' ' + sg.tags.join(' ') + ' ' + cat.name).toLowerCase();
+      if (searchText && !cardText.includes(searchText)) return;
+
+      cards.push({
+        catId: cat.id, catName: cat.name, catIcon: cat.icon,
+        catColor: cat.color, catColorClass: cat.colorClass,
+        catSource: cat.source, catStatus: cat.status, catDesc: cat.desc,
+        sgName: sg.name, sgCount: sg.count, sgTags: sg.tags
+      });
+    });
+  });
+
+  // 智能体规划卡片（仅在匹配时显示）
+  if ((!activeCategory || activeCategory === 'agent') &&
+      (sourceFilter === 'all' || sourceFilter === '手工登记') &&
+      (statusFilter === 'all' || statusFilter === '规划中') &&
+      (!searchText || '智能体 助手 工具平台 规划'.toLowerCase().includes(searchText))) {
+    // 不加入卡片，在 stats 中体现
+  }
+
+  // 渲染
+  if (cards.length === 0) {
+    grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📭</div><div class="empty-state-title">没有匹配的服务</div><div>尝试调整筛选条件或搜索关键词</div></div>`;
+    statsBar.innerHTML = `共 <strong>0</strong> 个服务项`;
+  } else {
+    let html = '';
+    cards.forEach((c, i) => {
+      html += `<div class="service-card color-${c.catColorClass}" onclick="openModal('${c.catId}','${c.sgName.replace(/'/g, "\\'")}',${i})">
+        <div class="card-icon">${c.catIcon}</div>
+        <div class="card-name">${c.sgName}</div>
+        <div class="card-meta">${c.catName} · ${c.sgCount > 1 ? c.sgCount + '项' : '单服务'}</div>
+        <div class="card-tags">
+          ${c.sgTags.map(t => `<span class="card-tag cat-tag">${t}</span>`).join('')}
+        </div>
+        <div class="card-footer">
+          <span>${c.catName}</span>
+          <span class="card-tag ${c.catSource==='自动采集'?'auto':'manual'}">${c.catSource}</span>
+        </div>
+      </div>`;
+    });
+    grid.innerHTML = html;
+
+    const catName = activeCategory ? CATEGORIES.find(c => c.id === activeCategory).name : '全部';
+    const sgName = activeSubgroup || '全部';
+    statsBar.innerHTML = `共 <strong>${cards.length}</strong> 个服务项 · ${catName}${sgName !== '全部' ? ' > ' + sgName : ''}`;
+  }
+}
+
+// ===== MODAL =====
+let cardsCache = [];
+function openModal(catId, sgName, idx) {
+  // Rebuild cards cache
+  cardsCache = [];
+  CATEGORIES.forEach(cat => {
+    cat.subgroups.forEach(sg => {
+      cardsCache.push({ cat, sg });
+    });
+  });
+
+  let cat, sg;
+  if (idx !== undefined && cardsCache[idx]) {
+    cat = cardsCache[idx].cat;
+    sg = cardsCache[idx].sg;
+  } else {
+    cat = CATEGORIES.find(c => c.id === catId);
+    sg = cat ? cat.subgroups.find(s => s.name === sgName) : null;
+  }
+  if (!cat || !sg) return;
+
+  document.getElementById('modalIcon').textContent = cat.icon;
+  document.getElementById('modalName').textContent = sg.name;
+  document.getElementById('modalCategory').textContent = `${cat.name} · ${sg.count > 1 ? sg.count + '项' : '单服务'}`;
+
+  let bodyHTML = `
+    <div class="modal-meta-row">
+      <div class="modal-meta-item">所属分类 <span>${cat.name}</span></div>
+      <div class="modal-meta-item">数据来源 <span>${cat.source}</span></div>
+      <div class="modal-meta-item">状态 <span>${cat.status}</span></div>
+    </div>
+    <div class="modal-desc">${cat.desc}</div>
+    <div><strong>标签</strong></div>
+    <div class="modal-tags">
+      ${sg.tags.map(t => `<span class="card-tag cat-tag" style="font-size:12px;">${t}</span>`).join('')}
+    </div>
+    <div style="margin-top:12px;"><strong>服务名称</strong></div>
+    <div style="color:var(--text-primary);font-size:14px;margin-top:4px;">${sg.name}</div>
+    <div style="margin-top:12px;"><strong>数量</strong></div>
+    <div style="color:var(--text-primary);font-size:14px;">${sg.count > 1 ? sg.count + ' 项' : '单服务'}</div>
+  `;
+  document.getElementById('modalBody').innerHTML = bodyHTML;
+  document.getElementById('modalOverlay').classList.add('show');
+}
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('show');
+}
+
+// ===== AGENT =====
+function toggleAgent() {
+  isAgentOpen = !isAgentOpen;
+  const panel = document.getElementById('agentPanel');
+  if (isAgentOpen) {
+    panel.classList.add('open');
+  } else {
+    panel.classList.remove('open');
+  }
+}
+
+function buildSuggestions() {
+  const el = document.getElementById('agentSuggestions');
+  el.innerHTML = '<div class="agent-suggestions-label">💡 试试这些问题</div>' +
+    SUGGESTIONS.map(q => `<span class="agent-suggestion-chip" onclick="sendSuggestion('${q.replace(/'/g, "\\'")}')">${q}</span>`).join('');
+}
+
+function sendSuggestion(q) {
+  addUserMsg(q);
+  setTimeout(() => addBotMsg(q), 600);
+}
+
+function sendAgentMsg() {
+  const input = document.getElementById('agentInput');
+  const q = input.value.trim();
+  if (!q) return;
+  input.value = '';
+  addUserMsg(q);
+  setTimeout(() => addBotMsg(q), 600);
+}
+
+function addUserMsg(text) {
+  const chat = document.getElementById('agentChat');
+  chat.innerHTML += `<div class="agent-msg user"><div class="msg-bubble">${text}</div></div>`;
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function addBotMsg(q) {
+  const chat = document.getElementById('agentChat');
+  let answer = MOCK_ANSWERS[q] || '抱歉，我目前是演示模式，暂时无法回答这个问题。\n\n您可以试试左侧的服务目录浏览，或点击建议问题进行体验。';
+  chat.innerHTML += `<div class="agent-msg bot"><div class="msg-bubble">${answer}</div></div>`;
+  chat.scrollTop = chat.scrollHeight;
+}
+
+// ===== KEYBOARD =====
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeModal();
+    if (isAgentOpen) toggleAgent();
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+    e.preventDefault();
+    document.getElementById('searchInput').focus();
+  }
+});
+
+// ===== INIT =====
+init();
+</script>
+</body>
+</html>
